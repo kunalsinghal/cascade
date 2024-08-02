@@ -9,16 +9,14 @@ export async function trySomeMedplumThings() {
 
   // read all pateints
   const patients = await medplum.searchResources("Patient", {});
-
   console.log("All patients:", patients);
 
   const practitioner = await getCurrentPractitioner();
   const appointmentManager = new AppointmentManager(practitioner.id);
 
-  const schedules = await appointmentManager.getSchedules();
-  console.log("Schedules:", schedules);
+  await appointmentManager.createFreshSlots();
 
-  for (const schedule of schedules) {
-    console.log("Schedule:", JSON.stringify(schedule, null, 2));
-  }
+  const slots = await appointmentManager.getAvailableSlots();
+
+  console.log("Slots:", slots);
 }
