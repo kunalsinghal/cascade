@@ -1,7 +1,7 @@
 "use server";
 
 import { getClient } from "./getClient";
-import { listPractitioners } from "./listPractitioners";
+import { getCurrentPractitioner, listPractitioners } from "./practitioners";
 import { AppointmentManager } from "./AppointmentManager";
 
 export async function trySomeMedplumThings() {
@@ -12,19 +12,7 @@ export async function trySomeMedplumThings() {
 
   console.log("All patients:", patients);
 
-  const practitioners = await listPractitioners();
-
-  if (practitioners.length === 0) {
-    console.log("No practitioners found");
-    return;
-  }
-
-  const practitioner = practitioners[0];
-  if (!practitioner.id) {
-    console.log("Practitioner has no ID");
-    return;
-  }
-
+  const practitioner = await getCurrentPractitioner();
   const appointmentManager = new AppointmentManager(practitioner.id);
 
   const schedules = await appointmentManager.getSchedules();

@@ -10,6 +10,8 @@ export class AppointmentManager {
   }
 
   async getSchedules(): Promise<Schedule[]> {
-    return await this._client.searchResources("Schedule");
+    return await this._client.searchResources("Schedule", {
+      actor: `Practitioner/${this._practitionerId}`,
+    });
   }
 }
