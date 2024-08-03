@@ -1,4 +1,7 @@
-import { MedplumClient } from "@medplum/core";
+import {
+  convertContainedResourcesToBundle,
+  MedplumClient,
+} from "@medplum/core";
 import { getClient } from "./getClient";
 import { Schedule, Slot } from "@medplum/fhirtypes";
 
@@ -30,32 +33,69 @@ export class AppointmentManager {
 
     const slots = await this._client.searchResources("Slot", {
       schedule: `Schedule/${schedule.id}`,
+      status: "free",
     });
 
     return slots;
   }
 
-  async createFreshSlots() {
+  async getAvailableSlotsForDay(day: Date) {
     const schedule = await this.getSchedule();
 
-    const start = schedule.planningHorizon?.start || new Date().toISOString();
+    day.setUTCHours(0, 0, 0, 0);
+
+    const slots = await this._client.searchResources("Slot", {
+      schedule: `Schedule/${schedule.id}`,
+      start: `ge${day.toISOString()}`,
+      status: "free",
+      _count: 1000,
+    });
+
+    return (
+      slots
+        .filter((slot) => {
+          const slotStart = new Date(slot.start);
+          if (slotStart.getUTCDate() !== day.getUTCDate()) {
+            return false;
+          }
+          if (slotStart.getUTCFullYear() !== day.getUTCFullYear()) {
+            return false;
+          }
+          if (slotStart.getUTCMonth() !== day.getUTCMonth()) {
+            return false;
+          }
+
+          return true;
+        })
+        // sort by start time
+        .sort((a, b) => {
+          return a.start.localeCompare(b.start);
+        })
+    );
+  }
+
+  async resetSlots() {
+    const schedule = await this.getSchedule();
+
+    const start = schedule.planningHorizon?.start || new Date().toUTCString();
     // end of the year as default
     const end =
       schedule.planningHorizon?.end ||
       new Date(new Date().getFullYear(), 11, 31).toISOString();
 
-    console.log("Creating slots from", start, "to", end);
+    const startDate = new Date(start);
+    startDate.setUTCHours(0, 0, 0, 0);
 
     // iterate over the days and create slots
     const slots: Slot[] = [];
     for (
-      let d = new Date(start);
+      let d = startDate;
       d.toISOString() <= end;
       d.setDate(d.getDate() + 1)
     ) {
       console.log("Creating slots for", d);
       // skip weekends
-      if (d.getDay() === 0 || d.getDay() === 6) {
+      if (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
         continue;
       }
 
@@ -64,10 +104,10 @@ export class AppointmentManager {
       for (let h = 10; h < 16; h++) {
         for (let m = 0; m < 60; m += 15) {
           const start = new Date(d);
-          start.setHours(h, m, 0, 0);
+          start.setUTCHours(h, m, 0, 0);
 
           const end = new Date(start);
-          end.setMinutes(end.getMinutes() + 15);
+          end.setUTCMinutes(end.getUTCMinutes() + 15);
 
           slots.push({
             resourceType: "Slot",
@@ -83,6 +123,20 @@ export class AppointmentManager {
     }
 
     console.log("Creating slots:", slots);
+
+    // delete all existing slots
+    const existingSlots = await this._client.searchResources("Slot", {
+      schedule: `Schedule/${schedule.id}`,
+      _count: 10000,
+    });
+
+    if (existingSlots.length > 0) {
+      await Promise.all(
+        existingSlots.map((slot) =>
+          this._client.deleteResource("Slot", `Slot/${slot.id}`)
+        )
+      );
+    }
 
     // create all slots in parallel
     await Promise.all(slots.map((slot) => this._client.createResource(slot)));

@@ -14,9 +14,11 @@ export async function trySomeMedplumThings() {
   const practitioner = await getCurrentPractitioner();
   const appointmentManager = new AppointmentManager(practitioner.id);
 
-  await appointmentManager.createFreshSlots();
-
-  const slots = await appointmentManager.getAvailableSlots();
+  // find slots for Aug 5th, 2024
+  const slots = await appointmentManager.getAvailableSlotsForDay(
+    new Date("2024-08-05")
+  );
 
   console.log("Slots:", slots);
+  console.log("Slots count:", slots.length);
 }
