@@ -5,6 +5,7 @@ import { getCurrentPractitioner, listPractitioners } from "./practitioners";
 import { AppointmentManager } from "./AppointmentManager";
 
 export async function trySomeMedplumThings() {
+  console.log("Trying some Medplum things", await listPractitioners());
   const medplum = getClient();
 
   // read all pateints
@@ -18,9 +19,6 @@ export async function trySomeMedplumThings() {
   const slots = await appointmentManager.getAvailableSlotsForDay(
     new Date("2024-08-05")
   );
-
-  console.log("Slots:", slots);
-  console.log("Slots count:", slots.length);
 
   const slot = slots[0];
   if (!slot.id) {

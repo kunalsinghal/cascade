@@ -1,3 +1,5 @@
+"use server";
+
 import { Practitioner } from "@medplum/fhirtypes";
 import { getClient } from "./getClient";
 
