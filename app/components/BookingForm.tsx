@@ -43,6 +43,10 @@ export default function BookingForm() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
+  const [slotStatus, setSlotStatus] = useState<"searching" | "found" | "unset">(
+    "unset"
+  );
+
   useEffect(() => {
     // fetch doctors list
     listPractitioners().then((practitioners) => {
@@ -55,14 +59,18 @@ export default function BookingForm() {
     (async () => {
       try {
         if (doctor !== "" && validate(date)) {
+          setSlotStatus("searching");
           const slots = await getAvailableSlotsForDay(date, doctor);
           setSlots(slots);
+          setSlotStatus("found");
         } else {
           setSlots([]);
+          setSlotStatus("unset");
         }
       } catch (err) {
         console.error("Error fetching slots:", err);
         setSlots([]);
+        setSlotStatus("unset");
       }
     })();
   }, [date, doctor]);
@@ -79,6 +87,9 @@ export default function BookingForm() {
     setEmail("");
     setDate("");
     setDoctor("");
+    setSlots([]);
+    setSlotStatus("unset");
+    setSelectedSlot(null);
   };
 
   const bookingButtonDisabled = !validateForm(
@@ -166,7 +177,13 @@ export default function BookingForm() {
       </div>
 
       {/* Radio buttons to select slot */}
-      {slots.length !== 0 && (
+      {slotStatus === "searching" && (
+        <div className="mb-6">Searching for available slots...</div>
+      )}
+      {slotStatus === "found" && !slots.length && (
+        <div className="mb-6">No slots available for the selected date</div>
+      )}
+      {slotStatus === "found" && slots.length && (
         <div className="mb-6">
           <label
             htmlFor="slot"
