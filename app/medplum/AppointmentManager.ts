@@ -74,6 +74,37 @@ export class AppointmentManager {
     );
   }
 
+  async bookSlot(slotId: string, patientId: string) {
+    const slot = await this._client.readResource("Slot", slotId);
+
+    if (slot.status !== "free") {
+      throw new Error("Slot is not available");
+    }
+
+    // create an appointment
+    await this._client.createResource({
+      resourceType: "Appointment",
+      slot: [{ reference: `Slot/${slot.id}` }],
+      status: "booked",
+      start: slot.start,
+      end: slot.end,
+      participant: [
+        {
+          actor: { reference: `Patient/${patientId}` },
+          status: "accepted",
+        },
+        {
+          actor: { reference: `Practitioner/${this._practitionerId}` },
+          status: "accepted",
+        },
+      ],
+    });
+
+    slot.status = "busy";
+
+    await this._client.updateResource(slot);
+  }
+
   async resetSlots() {
     const schedule = await this.getSchedule();
 

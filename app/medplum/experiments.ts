@@ -21,4 +21,20 @@ export async function trySomeMedplumThings() {
 
   console.log("Slots:", slots);
   console.log("Slots count:", slots.length);
+
+  const slot = slots[0];
+  if (!slot.id) {
+    console.log("No slots found");
+    return;
+  }
+
+  const patientId = patients[0].id;
+  if (!patientId) {
+    console.log("No patients found");
+    return;
+  }
+
+  appointmentManager.bookSlot(slot.id, patientId);
+
+  console.log("Slot booked");
 }
